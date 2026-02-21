@@ -201,6 +201,34 @@ public class TextureLibrary {
 		return renderTexture;
 	}
 
+	/**
+	 * Create a render texture with the specified dimensions and format value.
+	 * 
+	 * Use this version to create textures for storing values outside the usual range for colours.
+	 * (E.g. for storing normals as GL_FLOAT)
+	 *
+	 * @param width	Texture width in pixels
+	 * @param height Texture height in pixels
+	 * @param internalFormat Internal texture format
+	 * @param format Texture format, one of GL_RED, GL_RG, GL_RGB, GL_BGR, GL_RGBA, GL_BGRA, GL_DEPTH_COMPONENT, GL_DEPTH_STENCIL
+	 * @param type Type
+	 * @return	The OpenGL handle to the render texture.
+	 */
+
+	public int createRenderTexture(int width, int height, int internalFormat, int format, int type) {
+		int renderTexture = glGenTextures();
+		glBindTexture(GL_TEXTURE_2D, renderTexture);
+		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, (ByteBuffer)null);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+		return renderTexture;
+	}
+
+	
 	// Each of the sides of the cubemap
 	private static final int[] SIDES = {
 		GL_TEXTURE_CUBE_MAP_POSITIVE_X, GL_TEXTURE_CUBE_MAP_NEGATIVE_X,

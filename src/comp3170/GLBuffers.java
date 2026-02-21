@@ -23,6 +23,13 @@ import static org.lwjgl.opengl.GL30.GL_COLOR_ATTACHMENT0;
 import static org.lwjgl.opengl.GL30.GL_DEPTH_ATTACHMENT;
 import static org.lwjgl.opengl.GL30.GL_FRAMEBUFFER;
 import static org.lwjgl.opengl.GL30.GL_FRAMEBUFFER_COMPLETE;
+import static org.lwjgl.opengl.GL30.GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT;
+import static org.lwjgl.opengl.GL30.GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER;
+import static org.lwjgl.opengl.GL30.GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT;
+import static org.lwjgl.opengl.GL30.GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE;
+import static org.lwjgl.opengl.GL30.GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER;
+import static org.lwjgl.opengl.GL30.GL_FRAMEBUFFER_UNDEFINED;
+import static org.lwjgl.opengl.GL30.GL_FRAMEBUFFER_UNSUPPORTED;
 import static org.lwjgl.opengl.GL30.GL_MAX_COLOR_ATTACHMENTS;
 import static org.lwjgl.opengl.GL30.GL_RENDERBUFFER;
 import static org.lwjgl.opengl.GL30.glBindFramebuffer;
@@ -32,6 +39,7 @@ import static org.lwjgl.opengl.GL30.glFramebufferRenderbuffer;
 import static org.lwjgl.opengl.GL30.glGenFramebuffers;
 import static org.lwjgl.opengl.GL30.glGenRenderbuffers;
 import static org.lwjgl.opengl.GL30.glRenderbufferStorage;
+import static org.lwjgl.opengl.GL32.GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS;
 import static org.lwjgl.opengl.GL32.glFramebufferTexture;
 
 import java.nio.FloatBuffer;
@@ -44,6 +52,7 @@ import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.lwjgl.BufferUtils;
+
 
 /**
  * Version 2023.2
@@ -360,11 +369,8 @@ public class GLBuffers {
 		glBindRenderbuffer(GL_RENDERBUFFER, depthRenderBuffer);
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width[0], height[0]);
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderBuffer);
-
-		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-			OpenGLException.checkError();
-			throw new OpenGLException("Failed to create framebuffer");
-		}
+		OpenGLException.checkError();
+		checkFrameBufferStatus(GL_FRAMEBUFFER);
 
 		return framebuffer;
 	}
@@ -400,13 +406,93 @@ public class GLBuffers {
 		glBindRenderbuffer(GL_RENDERBUFFER, depthRenderBuffer);
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width[0], height[0]);
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderBuffer);
-
-		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-			OpenGLException.checkError();
-			throw new OpenGLException("Failed to create framebuffer");
-		}
+		OpenGLException.checkError();
+		checkFrameBufferStatus(GL_FRAMEBUFFER);
 
 		return framebuffer;
+	}
+
+	/**
+	 * Create a framebuffer that writes to multiple colour buffers and a depth texture.
+	 *
+	 * @param renderTextures An array of render texture in which to store the colour buffers 
+	 * @param depthTextures An render texture in which to store the depth buffer 
+	 * @return The OpenGL handle to the frame buffer
+	 * @throws OpenGLException
+	 * @throws GLException
+	 */
+
+	public static int createFrameBuffer(int[] renderTextures, int depthTexture) throws OpenGLException {
+		if (renderTextures.length > GL_MAX_COLOR_ATTACHMENTS) {
+			throw new IllegalArgumentException(
+					String.format("Too many colour attachments. Maximum = %d", GL_MAX_COLOR_ATTACHMENTS));
+		}
+
+		int[] width = new int[1];
+		int[] height = new int[1];
+		glBindTexture(GL_TEXTURE_2D, renderTextures[0]);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, width);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, height);
+
+		int framebuffer = glGenFramebuffers();
+		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+		for (int i = 0; i < renderTextures.length; i++) {
+			glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, renderTextures[i], 0);
+		}
+
+		glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthTexture, 0);
+
+		OpenGLException.checkError();
+		checkFrameBufferStatus(GL_FRAMEBUFFER);
+
+		return framebuffer;
+	}
+	
+	/**
+	 * Convert the glCheckFramebufferStatus result into a string and throw an exception
+	 * unless it is 
+	 * @param target
+	 * @return
+	 * @throws OpenGLException
+	 */
+	
+	private static int checkFrameBufferStatus(int target) throws OpenGLException
+	{
+		int status = glCheckFramebufferStatus(target);
+		
+		switch (status)
+		{
+		case GL_FRAMEBUFFER_COMPLETE:
+			return status;
+			
+		case GL_FRAMEBUFFER_UNDEFINED:
+			throw new OpenGLException("GL_FRAMEBUFFER_UNDEFINED");
+
+		case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+			throw new OpenGLException("GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT");
+
+		case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+			throw new OpenGLException("GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT");
+
+		case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+			throw new OpenGLException("GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER");
+
+		case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+			throw new OpenGLException("GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER");
+
+		case GL_FRAMEBUFFER_UNSUPPORTED:
+			throw new OpenGLException("GL_FRAMEBUFFER_UNSUPPORTED");
+
+		case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+			throw new OpenGLException("GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE");
+
+		case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+			throw new OpenGLException("GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS");
+
+		default:
+			throw new OpenGLException("Unknown glCheckFramebufferStatus");
+		}
+		
 	}
 
 }
