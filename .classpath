@@ -75,5 +75,6 @@
 	<classpathentry exported="true" kind="lib" path="lwjgl-release-3.4.0/lwjgl-stb-sources.jar"/>
 	<classpathentry exported="true" kind="lib" path="lwjgl-release-3.4.0/lwjgl-unsafe.jar"/>
 	<classpathentry exported="true" kind="lib" path="lwjgl-release-3.4.0/lwjgl-unsafe-sources.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/comp3170-prac-week1"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
